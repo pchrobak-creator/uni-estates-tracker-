@@ -1,138 +1,112 @@
-# Uni Estates Warsaw Tracker
+# Uni Estates Tracker
 
-Dashboard aktywności i przychodów dla zespołu agentów nieruchomości — 6 agentów, widok managera i agentów, PWA.
+Internal activity and revenue tracking app for Uni Estates real estate agents across three offices (Warsaw, Kraków, Katowice).
 
----
+## Status
 
-## Uruchomienie lokalne
+| Area | Status |
+|------|--------|
+| PIN-based auth (3 roles) | ✅ Done |
+| Agent views (revenue, stats, ranking, leads, inquiries) | ✅ Done |
+| Manager views (revenue, activity, evaluations, leads, inquiries) | ✅ Done |
+| Superadmin views (all offices, office filter) | ✅ Done |
+| Google Sheets integration (leads & inquiries) | ✅ Done |
+| Agent commission sheets integration | ⏳ Awaiting column structure |
+| Kraków / Katowice agents (PINs, colors) | ⏳ Awaiting data |
+| Google API Key configured | ⏳ Awaiting key in `.env` |
+| Quarterly planning view | 🔲 Not started |
+| Weekly email summaries | 🔲 Not started |
+
+## Tech Stack
+
+- **Backend** — Node.js, Express, SQLite (`node:sqlite`)
+- **Frontend** — React 18, Vite, Tailwind CSS, Chart.js
+- **Data** — Google Sheets API v4 (API Key, public sheets)
+
+## Roles & PINs
+
+| PIN | Name | Role | Office |
+|-----|------|------|--------|
+| `1234` | Piotr Chrobak | Superadmin | Warsaw |
+| `2234` | Zbigniew Michalak | Superadmin | Kraków |
+| `3234` | Katarzyna Trybala | Manager | Katowice |
+| `1001` | Hanna | Agent | Warsaw |
+| `1002` | Michał | Agent | Warsaw |
+| `1003` | Nikolay | Agent | Warsaw |
+| `1004` | Grzegorz | Agent | Warsaw |
+| `1005` | Piotr Z. | Agent | Warsaw |
+| `1006` | Mikołaj | Agent | Warsaw |
+
+## Setup
 
 ```bash
-# 1. Zainstaluj zależności
+# Install dependencies
 npm install
 cd client && npm install && cd ..
 
-# 2. Uruchom (backend + frontend razem)
-npm run dev
+# Configure environment
+cp .env.example .env
+# → add GOOGLE_API_KEY to .env
+
+# Run (development)
+node server/index.js          # backend  → localhost:3001
+npm run dev --prefix client   # frontend → localhost:5173
 ```
 
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:3001
+## Google Sheets Configuration
 
-**PINy dostępu:**
-| Osoba     | PIN  |
-|-----------|------|
-| Manager   | 1234 |
-| Hanna     | 1001 |
-| Michał    | 1002 |
-| Nikolay   | 1003 |
-| Grzegorz  | 1004 |
-| Piotr     | 1005 |
-| Mikołaj   | 1006 |
+Three types of sheets are used:
 
----
+| Sheet | ID | Purpose |
+|-------|----|---------|
+| Central (WARUNKI BONUSÓW) | `1wMUykuEbF0gjiwMgS3nOX6tyWZvaqwDMVwZaNiZFBrc` | All agents, bonus thresholds, per-agent sheet IDs |
+| Warsaw revenue | `1AWcZ8EUJPeDHaTppKbIy0X3izCbXWp1WHxBCRl4qV1k` | Office-level revenue |
+| Kraków revenue | `1zMf4XBr-wSZtBj1FYOBIwsBcwK6VtHMyMi2cUUI8hnk` | Office-level revenue |
+| Katowice revenue | `11TqcFTEgpxlxQ7r-TUyVR6xd9mbj-ooYC7wu3N2LEeo` | Office-level revenue |
 
-## Deploy na Railway.app (darmowy tier)
+Per-agent sheet IDs (`Plik Prowizje-Bonusy` and `Plik Leady-Zapytania`) are loaded automatically from the central sheet at server startup.
 
-1. Załóż konto na [railway.app](https://railway.app)
-2. Kliknij **New Project → Deploy from GitHub repo**
-3. Podłącz swoje repo z tym projektem
-4. Railway automatycznie wykryje `Dockerfile` i zbuduje obraz
-5. W zakładce **Variables** dodaj:
-   - `NODE_ENV=production`
-   - `DB_PATH=/app/data/tracker.db`
-6. W zakładce **Settings → Networking** kliknij **Generate Domain**
-7. Gotowe — Railway automatycznie deployuje po każdym push do main
+All sheets must be set to **public (anyone with the link can view)**.
 
-> **Uwaga:** Railway na darmowym tierze usypia projekty po 21 dniach bez aktywności. Baza SQLite jest efemeryczna — dla trwałości danych użyj Railway Volume lub zewnętrznej bazy.
-
----
-
-## Deploy na Render.com (darmowy tier)
-
-1. Załóż konto na [render.com](https://render.com)
-2. **New → Web Service → Connect GitHub repo**
-3. Ustaw:
-   - **Environment:** Docker
-   - **Dockerfile Path:** `./Dockerfile`
-   - **Instance Type:** Free
-4. W **Environment Variables** dodaj:
-   - `NODE_ENV=production`
-   - `PORT=3001`
-5. Kliknij **Create Web Service**
-6. Po deploymencie Render da Ci URL (np. `https://ue-tracker.onrender.com`)
-
-> **Uwaga:** Na darmowym tierze Render usypia serwis po 15 minutach nieaktywności (pierwsze zapytanie może trwać ~30s). Dla trwałości danych podłącz Render Disk ($1/GB/mies.) z `Mount Path: /app/data`.
-
----
-
-## Jak zmienić PINy agentów
-
-Edytuj plik `server/auth.js`:
-
-```js
-const AGENTS = [
-  { name: 'Hanna', pin: '1001', color: '#1D9E75', goal: 50000 },
-  // zmień pin tutaj
-];
-const MANAGER_PIN = '1234'; // zmień PIN managera tutaj
-```
-
-Zrestartuj serwer po zmianach.
-
----
-
-## Jak zaktualizować dane przychodów kwartalnych
-
-**Opcja 1 — przez API (manager PIN):**
-```bash
-curl -X POST https://TWOJ-URL/api/revenue \
-  -H "Content-Type: application/json" \
-  -H "x-pin: 1234" \
-  -d '{"agent":"Michał","quarter":"q2-2026","prowizja":25000,"transakcje":8}'
-```
-
-**Opcja 2 — edycja seed data w `server/db.js`** (tylko przy pierwszym uruchomieniu, gdy baza jest pusta).
-
----
-
-## Jak dodać nowego agenta
-
-1. W `server/auth.js` dodaj do tablicy `AGENTS`:
-```js
-{ name: 'Anna', pin: '1007', color: '#AA44BB', goal: 75000 },
-```
-
-2. W `client/src/views/Revenue.jsx`, `Activity.jsx`, `Evaluations.jsx`, `Leaderboard.jsx` — kolory agentów są pobierane z API (`/api/agents`), więc kolor dodany w auth.js będzie automatycznie użyty.
-
-3. Zrestartuj serwer.
-
----
-
-## Struktura projektu
+## Project Structure
 
 ```
-/
 ├── server/
-│   ├── index.js        — Express server + auth endpoint
-│   ├── db.js           — SQLite setup + dane seed
-│   ├── auth.js         — konfiguracja PINów i agentów
+│   ├── index.js              # Express server + startup agent sync
+│   ├── auth.js               # PIN validation, role middleware
+│   ├── db.js                 # SQLite schema + seed data
+│   ├── googleSheets.js       # Sheets API functions + TTL cache
+│   ├── cache.js              # In-memory TTL cache
+│   ├── config/
+│   │   ├── offices.json      # Office config (sheet IDs, agents, PINs)
+│   │   ├── roles.js          # Agent list, manager map
+│   │   └── agentSheets.js    # Per-agent sheet ID maps
 │   └── routes/
-│       ├── entries.js  — CRUD dla wpisów aktywności
-│       └── revenue.js  — CRUD dla danych przychodów
-├── client/
-│   └── src/
-│       ├── App.jsx     — główny komponent, routing
-│       ├── utils.js    — helpery (tydzień, kwartał, formatowanie)
-│       ├── components/ — Login, BottomNav, MetricCard, etc.
-│       └── views/      — Revenue, Activity, Evaluations, LogEntry, MyStats, Leaderboard
-├── Dockerfile
-├── docker-compose.yml
-└── README.md
+│       ├── entries.js        # Activity entries (calls, meetings, acquisitions)
+│       ├── revenue.js        # Revenue (DB + agent Sheets)
+│       ├── inquiries.js      # Inquiries (Sheets data + DB statuses)
+│       └── leads.js          # Leads (Sheets data + DB statuses)
+└── client/src/
+    ├── App.jsx               # Role-based routing
+    ├── utils.js              # Helpers, evaluation scoring, apiFetch
+    ├── components/           # Login, BottomNav, MetricCard, ProgressBar...
+    └── views/
+        ├── Revenue.jsx       # Team revenue (manager/superadmin)
+        ├── Activity.jsx      # Team activity
+        ├── Evaluations.jsx   # Agent evaluations (manager)
+        ├── ManagerInquiries.jsx
+        ├── ManagerLeads.jsx
+        ├── MyRevenue.jsx     # Personal revenue (agent)
+        ├── MyStats.jsx       # Personal activity stats (agent)
+        ├── Leaderboard.jsx   # Team ranking (agent)
+        ├── Inquiries.jsx     # My inquiries (agent)
+        ├── Leads.jsx         # My leads (agent)
+        └── LogEntry.jsx      # Log activity entry
 ```
 
-## Tech stack
+## Next Steps
 
-- **Frontend:** React 18, Tailwind CSS, Chart.js, Vite, PWA (manifest + service worker)
-- **Backend:** Node.js, Express
-- **Baza danych:** SQLite via `better-sqlite3`
-- **Auth:** PIN-based (sessionStorage), middleware x-pin header
+1. Add `GOOGLE_API_KEY` to `.env`
+2. Share column headers from `Plik Prowizje-Bonusy` agent sheets → wire up real revenue data
+3. Add Kraków and Katowice agents to `server/config/offices.json`
+4. Build quarterly planning view
