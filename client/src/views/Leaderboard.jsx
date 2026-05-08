@@ -3,12 +3,8 @@ import { apiFetch, getWeekKey, aggregateEntries, formatNum } from '../utils';
 import ProgressBar from '../components/ProgressBar';
 import AgentAvatar from '../components/AgentAvatar';
 
-const AGENT_COLORS = {
-  Hanna: '#1D9E75', Michał: '#378ADD', Nikolay: '#D85A30',
-  Grzegorz: '#7F77DD', Piotr: '#BA7517', Mikołaj: '#D4537E',
-};
-
 export default function Leaderboard({ user, agents }) {
+  const AGENT_COLORS = Object.fromEntries(agents.map(a => [a.name, a.color]));
   const [entries, setEntries] = useState([]);
 
   const load = useCallback(async () => {

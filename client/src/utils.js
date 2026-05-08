@@ -73,8 +73,8 @@ export function conversionRate(done, calls) {
 
 export function evalScore(stats, prevStats) {
   let score = 0;
-  if (stats.calls >= 30) score += 2;
-  else if (stats.calls >= 15) score += 1;
+  if (stats.calls >= 50) score += 2;
+  else if (stats.calls >= 25) score += 1;
   if (stats.pozyski >= 3) score += 3;
   else if (stats.pozyski >= 1) score += 2;
   const conv = conversionRate(stats.done, stats.calls);
@@ -102,9 +102,9 @@ export function evalComment(agentName, stats, prevStats, score) {
     return `${agentName} wypracował dobre wyniki: ${stats.calls} telefonów i ${stats.pozyski} pozysk${stats.pozyski === 1 ? 'i' : 'ów'}. Warto utrzymać tempo i popracować nad dalszym zwiększeniem konwersji (${conv}%).`;
   }
   if (score >= 3) {
-    return `${agentName} osiągnął przeciętne wyniki — ${stats.calls} telefonów i ${stats.pozyski} pozysk${stats.pozyski === 1 ? 'i' : 'ów'}. Rekomendujemy zwiększenie aktywności telefonicznej i skupienie się na pozyskach.`;
+    return `${agentName} osiągnął przeciętne wyniki — ${stats.calls} telefonów i ${stats.pozyski} pozysk${stats.pozyski === 1 ? 'i' : 'ów'}. Rekomendujemy zwiększenie aktywności telefonicznej do min. 50 tygodniowo i skupienie się na pozyskach.`;
   }
-  return `${agentName} wymaga poprawy — ${stats.calls} telefonów i ${stats.pozyski} pozysk${stats.pozyski === 1 ? 'i' : 'ów'} to wynik poniżej oczekiwań. Należy zwiększyć aktywność i skupić się na realizacji tygodniowych celów.`;
+  return `${agentName} wymaga poprawy — ${stats.calls} telefonów i ${stats.pozyski} pozysk${stats.pozyski === 1 ? 'i' : 'ów'} to wynik poniżej oczekiwań. Cel: minimum 50 telefonów tygodniowo. Należy zwiększyć aktywność i skupić się na realizacji celów.`;
 }
 
 export function statusBadge(prowizja, goal) {
@@ -117,10 +117,10 @@ export function statusBadge(prowizja, goal) {
 
 const API_BASE = '';
 
-export async function apiFetch(path, options = {}, pin = null) {
+export async function apiFetch(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-  const storedPin = pin || sessionStorage.getItem('pin');
-  if (storedPin) headers['x-pin'] = storedPin;
+  const pin = sessionStorage.getItem('pin');
+  if (pin) headers['x-pin'] = pin;
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

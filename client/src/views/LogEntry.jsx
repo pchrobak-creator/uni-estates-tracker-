@@ -3,7 +3,7 @@ import { apiFetch, getWeekKey, getQuarterKey } from '../utils';
 import Toast from '../components/Toast';
 
 export default function LogEntry({ user, agents, onSuccess }) {
-  const isManager = user.role === 'manager';
+  const isManager = user.role === 'manager' || user.role === 'superadmin';
   const [agent, setAgent] = useState(isManager ? (agents[0]?.name || '') : user.name);
   const [calls, setCalls] = useState('');
   const [scheduled, setScheduled] = useState('');

@@ -13,12 +13,8 @@ import AgentAvatar from '../components/AgentAvatar';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-const AGENT_COLORS = {
-  Hanna: '#1D9E75', Michał: '#378ADD', Nikolay: '#D85A30',
-  Grzegorz: '#7F77DD', Piotr: '#BA7517', Mikołaj: '#D4537E',
-};
-
 export default function Activity({ agents }) {
+  const AGENT_COLORS = Object.fromEntries(agents.map(a => [a.name, a.color]));
   const [mode, setMode] = useState('week');
   const [entries, setEntries] = useState([]);
   const [prevEntries, setPrevEntries] = useState([]);

@@ -2,24 +2,16 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement,
-  Title, Tooltip, Legend, LineElement, PointElement,
+  Title, Tooltip, Legend,
 } from 'chart.js';
 import { apiFetch, formatPLN, formatNum, getRevenueQuarterKey, getQuarterLabel, statusBadge } from '../utils';
 import MetricCard from '../components/MetricCard';
 import ProgressBar from '../components/ProgressBar';
 import AgentAvatar from '../components/AgentAvatar';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, LineElement, PointElement);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const TEAM_GOAL = 300000;
-const AGENT_COLORS = {
-  Hanna: '#1D9E75', Michał: '#378ADD', Nikolay: '#D85A30',
-  Grzegorz: '#7F77DD', Piotr: '#BA7517', Mikołaj: '#D4537E',
-};
-const AGENT_GOALS = {
-  Mikołaj: 87500, Michał: 75000, Nikolay: 75000,
-  Grzegorz: 75000, Hanna: 50000, Piotr: 75000,
-};
 
 const QUARTERS = [
   { key: 'q2-2026', label: 'Q2 2026' },
@@ -28,11 +20,16 @@ const QUARTERS = [
   { key: 'q3-2025', label: 'Q3 2025' },
 ];
 
-export default function Revenue({ agents }) {
+const OFFICES = ['Wszystkie', 'Warszawa', 'Kraków', 'Katowice'];
+
+export default function Revenue({ agents, user }) {
   const [quarter, setQuarter] = useState(getRevenueQuarterKey(0));
   const [data, setData] = useState([]);
   const [sortKey, setSortKey] = useState('prowizja');
   const [sortDir, setSortDir] = useState(-1);
+  const [office, setOffice] = useState(
+    user?.role === 'superadmin' ? 'Wszystkie' : (user?.office || 'Warszawa')
+  );
 
   const load = useCallback(async () => {
     try {
@@ -43,9 +40,20 @@ export default function Revenue({ agents }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const sorted = [...data].sort((a, b) => sortDir * (b[sortKey] - a[sortKey]));
-  const total = data.reduce((s, r) => s + (r.prowizja || 0), 0);
-  const totalTx = data.reduce((s, r) => s + (r.transakcje || 0), 0);
+  // Build lookup: agent name → color & goal from agents prop
+  const agentMap = Object.fromEntries(agents.map(a => [a.name, a]));
+
+  // Filter by office if needed
+  const filtered = office === 'Wszystkie'
+    ? data
+    : data.filter(r => {
+        const a = agentMap[r.agent];
+        return a ? a.office === office : true;
+      });
+
+  const sorted = [...filtered].sort((a, b) => sortDir * (b[sortKey] - a[sortKey]));
+  const total = filtered.reduce((s, r) => s + (r.prowizja || 0), 0);
+  const totalTx = filtered.reduce((s, r) => s + (r.transakcje || 0), 0);
   const goalPct = total / TEAM_GOAL * 100;
   const leader = sorted[0];
 
@@ -60,7 +68,7 @@ export default function Revenue({ agents }) {
       {
         label: 'Prowizja (PLN)',
         data: sorted.map(r => r.prowizja),
-        backgroundColor: sorted.map(r => AGENT_COLORS[r.agent] || '#9A9A94'),
+        backgroundColor: sorted.map(r => agentMap[r.agent]?.color || '#9A9A94'),
         borderRadius: 6,
         borderSkipped: false,
       },
@@ -72,11 +80,7 @@ export default function Revenue({ agents }) {
     maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: ctx => ' ' + formatPLN(ctx.raw),
-        },
-      },
+      tooltip: { callbacks: { label: ctx => ' ' + formatPLN(ctx.raw) } },
     },
     scales: {
       y: {
@@ -88,11 +92,25 @@ export default function Revenue({ agents }) {
     },
   };
 
+  const isSuperAdmin = user?.role === 'superadmin';
+
   return (
     <div className="flex flex-col gap-4 p-4 fade-in">
-      {/* Quarter selector */}
-      <div className="flex items-center gap-3">
+      {/* Header + filters */}
+      <div className="flex items-center gap-2 flex-wrap">
         <h2 className="text-lg font-bold flex-1">Przychody</h2>
+        {isSuperAdmin && (
+          <select
+            value={office}
+            onChange={e => setOffice(e.target.value)}
+            className="card px-3 py-2 text-sm font-medium appearance-none"
+            style={{ border: '1px solid var(--border)', cursor: 'pointer' }}
+          >
+            {OFFICES.map(o => (
+              <option key={o} value={o}>{o}</option>
+            ))}
+          </select>
+        )}
         <select
           value={quarter}
           onChange={e => setQuarter(e.target.value)}
@@ -108,7 +126,10 @@ export default function Revenue({ agents }) {
       {/* Team goal bar */}
       <div className="card p-4 flex flex-col gap-3">
         <div className="flex justify-between items-center">
-          <span className="text-sm font-semibold">Cel zespołu {getQuarterLabel(`${quarter.split('-')[0].toUpperCase()}-${quarter.split('-')[1]}`)}</span>
+          <span className="text-sm font-semibold">
+            Cel {office !== 'Wszystkie' ? office : 'wszystkich oddziałów'} &nbsp;
+            {getQuarterLabel(`${quarter.split('-')[0].toUpperCase()}-${quarter.split('-')[1]}`)}
+          </span>
           <span className="font-mono text-sm font-bold" style={{ color: 'var(--green)' }}>
             {Math.round(goalPct)}%
           </span>
@@ -129,11 +150,11 @@ export default function Revenue({ agents }) {
       </div>
 
       {/* Table */}
-      {data.length === 0 ? (
+      {sorted.length === 0 ? (
         <div className="card p-8 text-center" style={{ color: 'var(--text-3)' }}>
           <p className="text-4xl mb-2">📊</p>
           <p className="font-medium">Brak danych</p>
-          <p className="text-sm">Brak wpisów dla {getQuarterLabel(`Q${quarter.split('-')[0].slice(1)}-${quarter.split('-')[1]}`)}</p>
+          <p className="text-sm">Brak wpisów dla wybranego okresu</p>
         </div>
       ) : (
         <>
@@ -162,8 +183,10 @@ export default function Revenue({ agents }) {
               </thead>
               <tbody>
                 {sorted.map((row, i) => {
-                  const goal = AGENT_GOALS[row.agent] || 75000;
-                  const sb = statusBadge(row.prowizja, goal);
+                  const agentInfo = agentMap[row.agent];
+                  const agentGoal = agentInfo?.goal || 75000;
+                  const agentColor = agentInfo?.color || '#9A9A94';
+                  const sb = statusBadge(row.prowizja, agentGoal);
                   const barPct = Math.min(100, (row.prowizja / (sorted[0]?.prowizja || 1)) * 100);
                   return (
                     <tr key={row.id} style={{ borderBottom: i < sorted.length - 1 ? '1px solid var(--border)' : 'none' }}>
@@ -174,11 +197,14 @@ export default function Revenue({ agents }) {
                       </td>
                       <td className="p-3">
                         <div className="flex items-center gap-2">
-                          <AgentAvatar name={row.agent} color={AGENT_COLORS[row.agent]} size={28} />
+                          <AgentAvatar name={row.agent} color={agentColor} size={28} />
                           <div>
                             <div className="font-semibold text-xs">{row.agent}</div>
+                            {isSuperAdmin && agentInfo?.office && (
+                              <div className="text-xs" style={{ color: 'var(--text-3)' }}>{agentInfo.office}</div>
+                            )}
                             <div className="mt-1">
-                              <ProgressBar value={barPct} max={100} color={AGENT_COLORS[row.agent] || '#9A9A94'} height={4} />
+                              <ProgressBar value={barPct} max={100} color={agentColor} height={4} />
                             </div>
                           </div>
                         </div>
@@ -186,17 +212,14 @@ export default function Revenue({ agents }) {
                       <td className="p-3 text-right">
                         <span className="font-mono font-bold text-xs">{formatPLN(row.prowizja)}</span>
                         <div className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
-                          {Math.round(row.prowizja / goal * 100)}% celu ind.
+                          {Math.round(row.prowizja / agentGoal * 100)}% celu ind.
                         </div>
                       </td>
                       <td className="p-3 text-right hidden sm:table-cell">
                         <span className="font-mono font-semibold">{row.transakcje}</span>
                       </td>
                       <td className="p-3 text-right">
-                        <span
-                          className="badge text-xs"
-                          style={{ background: sb.bg, color: sb.color }}
-                        >
+                        <span className="badge text-xs" style={{ background: sb.bg, color: sb.color }}>
                           {sb.label}
                         </span>
                       </td>
@@ -207,17 +230,10 @@ export default function Revenue({ agents }) {
             </table>
           </div>
 
-          {/* Chart */}
           <div className="card p-4">
             <p className="text-sm font-semibold mb-3">Przychody agentów</p>
             <div style={{ height: 200 }}>
               <Bar data={chartData} options={chartOptions} />
-            </div>
-            <div className="mt-2 flex items-center gap-2">
-              <div className="flex-1 border-t border-dashed" style={{ borderColor: 'var(--coral)' }} />
-              <span className="text-xs font-mono" style={{ color: 'var(--coral)' }}>
-                Cel: {formatPLN(TEAM_GOAL)}
-              </span>
             </div>
           </div>
         </>

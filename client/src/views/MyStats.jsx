@@ -4,7 +4,8 @@ import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip,
 } from 'chart.js';
 import {
-  apiFetch, getWeekKey, getQuarterKey, aggregateEntries, conversionRate, formatNum,
+  apiFetch, getWeekKey, getQuarterKey, getRevenueQuarterKey, aggregateEntries,
+  conversionRate, formatNum, formatPLN, statusBadge,
 } from '../utils';
 import MetricCard from '../components/MetricCard';
 import ProgressBar from '../components/ProgressBar';
@@ -13,11 +14,16 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
 export default function MyStats({ user }) {
   const [entries, setEntries] = useState([]);
+  const [revenueData, setRevenueData] = useState([]);
 
   const load = useCallback(async () => {
     try {
-      const data = await apiFetch('/api/entries');
-      setEntries(data);
+      const [activityData, revRows] = await Promise.all([
+        apiFetch('/api/entries'),
+        apiFetch(`/api/revenue?quarter=${getRevenueQuarterKey(0)}`),
+      ]);
+      setEntries(activityData);
+      setRevenueData(revRows);
     } catch {}
   }, []);
 
@@ -44,7 +50,7 @@ export default function MyStats({ user }) {
     datasets: [{
       data: history,
       backgroundColor: Array.from({ length: 6 }, (_, i) =>
-        i === 5 ? (user.color || '#1D9E75') : `${user.color || '#1D9E75'}55`
+        i === 5 ? (color) : `${color}55`
       ),
       borderRadius: 6,
     }],
@@ -64,20 +70,39 @@ export default function MyStats({ user }) {
   };
 
   const personalGoal = user.goal || 75000;
+  const color = user.color || 'var(--green)';
   const conv = conversionRate(cur.done, cur.calls);
+  const myRevenue = revenueData.find(r => r.agent === user.name) || { prowizja: 0, transakcje: 0 };
+  const revPct = personalGoal ? (myRevenue.prowizja / personalGoal) * 100 : 0;
+  const revBadge = statusBadge(myRevenue.prowizja, personalGoal);
 
   return (
     <div className="flex flex-col gap-4 p-4 fade-in">
       <div className="flex items-center gap-3">
         <div
           className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-          style={{ background: user.color || 'var(--green)' }}
+          style={{ background: color }}
         >
           {user.name?.[0]}
         </div>
         <div>
           <h2 className="text-lg font-bold">{user.name}</h2>
           <p className="text-xs" style={{ color: 'var(--text-3)' }}>Bieżący tydzień</p>
+        </div>
+      </div>
+
+      {/* Revenue summary */}
+      <div className="card p-4 flex flex-col gap-2">
+        <div className="flex justify-between items-center">
+          <p className="text-sm font-semibold">Przychody — bieżący kwartał</p>
+          <span className="badge text-xs" style={{ background: revBadge.bg, color: revBadge.color }}>
+            {revBadge.label}
+          </span>
+        </div>
+        <ProgressBar value={myRevenue.prowizja} max={personalGoal} color={color} height={8} />
+        <div className="flex justify-between text-xs font-mono">
+          <span style={{ color, fontWeight: 700 }}>{formatPLN(myRevenue.prowizja)}</span>
+          <span style={{ color: 'var(--text-3)' }}>cel: {formatPLN(personalGoal)}</span>
         </div>
       </div>
 

@@ -7,19 +7,37 @@ import Evaluations from './views/Evaluations';
 import LogEntry from './views/LogEntry';
 import MyStats from './views/MyStats';
 import Leaderboard from './views/Leaderboard';
+import Inquiries from './views/Inquiries';
+import Leads from './views/Leads';
+import ManagerInquiries from './views/ManagerInquiries';
+import ManagerLeads from './views/ManagerLeads';
+import MyRevenue from './views/MyRevenue';
 import { apiFetch } from './utils';
 
+const SUPERADMIN_TABS = [
+  { id: 'revenue',     label: 'Przychody' },
+  { id: 'activity',    label: 'Aktywność' },
+  { id: 'inquiries',   label: 'Zapytania' },
+  { id: 'leads',       label: 'Leady' },
+  { id: 'log',         label: 'Wpis' },
+];
+
 const MANAGER_TABS = [
-  { id: 'revenue', label: 'Przychody' },
-  { id: 'activity', label: 'Aktywność' },
+  { id: 'revenue',     label: 'Przychody' },
+  { id: 'activity',    label: 'Aktywność' },
   { id: 'evaluations', label: 'Oceny' },
-  { id: 'log', label: 'Wpis' },
+  { id: 'inquiries',   label: 'Zapytania' },
+  { id: 'leads',       label: 'Leady' },
+  { id: 'log',         label: 'Wpis' },
 ];
 
 const AGENT_TABS = [
-  { id: 'stats', label: 'Moje wyniki' },
+  { id: 'myrevenue',   label: 'Przychody' },
+  { id: 'stats',       label: 'Wyniki' },
   { id: 'leaderboard', label: 'Ranking' },
-  { id: 'log', label: 'Wpis' },
+  { id: 'inquiries',   label: 'Zapytania' },
+  { id: 'leads',       label: 'Leady' },
+  { id: 'log',         label: 'Wpis' },
 ];
 
 export default function App() {
@@ -39,7 +57,7 @@ export default function App() {
   useEffect(() => {
     if (user) {
       loadAgents();
-      setTab(user.role === 'manager' ? 'revenue' : 'stats');
+      setTab(user.role === 'agent' ? 'myrevenue' : 'revenue');
     }
   }, [user, loadAgents]);
 
@@ -56,24 +74,30 @@ export default function App() {
 
   if (!user) return <Login onLogin={handleLogin} />;
 
-  const isManager = user.role === 'manager';
-  const tabs = isManager ? MANAGER_TABS : AGENT_TABS;
+  const isSuperAdmin = user.role === 'superadmin';
+  const isManager    = user.role === 'manager';
+  const isAgent      = user.role === 'agent';
+  const hasManagerAccess = isSuperAdmin || isManager;
+
+  const tabs = isSuperAdmin ? SUPERADMIN_TABS : isManager ? MANAGER_TABS : AGENT_TABS;
 
   function renderView() {
     switch (tab) {
-      case 'revenue': return <Revenue agents={agents} />;
-      case 'activity': return <Activity agents={agents} />;
-      case 'evaluations': return <Evaluations agents={agents} />;
-      case 'log': return <LogEntry user={user} agents={agents} />;
-      case 'stats': return <MyStats user={user} />;
+      case 'revenue':     return <Revenue agents={agents} user={user} />;
+      case 'activity':    return <Activity agents={agents} user={user} />;
+      case 'evaluations': return <Evaluations agents={agents} user={user} />;
+      case 'inquiries':   return hasManagerAccess ? <ManagerInquiries agents={agents} user={user} /> : <Inquiries user={user} />;
+      case 'leads':       return hasManagerAccess ? <ManagerLeads agents={agents} user={user} /> : <Leads user={user} />;
+      case 'log':         return <LogEntry user={user} agents={agents} />;
+      case 'myrevenue':   return <MyRevenue user={user} />;
+      case 'stats':       return <MyStats user={user} />;
       case 'leaderboard': return <Leaderboard user={user} agents={agents} />;
-      default: return null;
+      default:            return null;
     }
   }
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
-      {/* Top bar */}
       <header
         className="sticky top-0 z-40 px-4 flex items-center gap-3"
         style={{
@@ -89,9 +113,13 @@ export default function App() {
         >
           UE
         </div>
-        <span className="font-semibold text-sm flex-1">Uni Estates Warsaw</span>
+        <div className="flex-1 min-w-0">
+          <span className="font-semibold text-sm">Uni Estates</span>
+          <span className="text-xs ml-2" style={{ color: 'var(--text-3)' }}>
+            {user.name || ''}{user.office ? ` · ${user.office}` : ''}
+          </span>
+        </div>
 
-        {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-1">
           {tabs.map(t => (
             <button
@@ -119,7 +147,6 @@ export default function App() {
         </button>
       </header>
 
-      {/* Main content */}
       <main
         className="max-w-3xl mx-auto content-with-bottom-nav md:pb-6"
         style={{ minHeight: 'calc(100vh - 56px)' }}
@@ -127,7 +154,6 @@ export default function App() {
         {renderView()}
       </main>
 
-      {/* Mobile bottom nav */}
       <div className="md:hidden">
         <BottomNav tabs={tabs} active={tab} onChange={setTab} />
       </div>

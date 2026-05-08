@@ -1,0 +1,24 @@
+{
+  "Warszawa": {
+    "revenueSheetId": "1AWcZ8EUJPeDHaTppKbIy0X3izCbXWp1WHxBCRl4qV1k",
+    "manager": "p.chrobak@uniestates.pl",
+    "agents": [
+      { "name": "Hanna",    "pin": "1001", "email": "h.raj@uniestates.pl",          "color": "#1D9E75" },
+      { "name": "Michał",   "pin": "1002", "email": "m.filip@uniestates.pl",        "color": "#378ADD" },
+      { "name": "Nikolay",  "pin": "1003", "email": "n.hadzhikostov@uniestates.pl", "color": "#D85A30" },
+      { "name": "Grzegorz", "pin": "1004", "email": "g.jakubik@uniestates.pl",      "color": "#7F77DD" },
+      { "name": "Piotr",    "pin": "1005", "email": "p.zajkowski@uniestates.pl",    "color": "#BA7517" },
+      { "name": "Mikołaj",  "pin": "1006", "email": "m.sporek@uniestates.pl",       "color": "#D4537E" }
+    ]
+  },
+  "Kraków": {
+    "revenueSheetId": "1zMf4XBr-wSZtBj1FYOBIwsBcwK6VtHMyMi2cUUI8hnk",
+    "manager": "z.michalak@uniestates.pl",
+    "agents": []
+  },
+  "Katowice": {
+    "revenueSheetId": "11TqcFTEgpxlxQ7r-TUyVR6xd9mbj-ooYC7wu3N2LEeo",
+    "manager": "k.trybala@uniestates.pl",
+    "agents": []
+  }
+}

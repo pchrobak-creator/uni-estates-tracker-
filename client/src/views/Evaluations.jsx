@@ -11,11 +11,6 @@ import AgentAvatar from '../components/AgentAvatar';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
-const AGENT_COLORS = {
-  Hanna: '#1D9E75', Michał: '#378ADD', Nikolay: '#D85A30',
-  Grzegorz: '#7F77DD', Piotr: '#BA7517', Mikołaj: '#D4537E',
-};
-
 const WEEK_OPTIONS = [
   { offset: 0, label: 'Bieżący tydzień' },
   { offset: -1, label: 'Poprzedni tydzień' },
@@ -23,6 +18,7 @@ const WEEK_OPTIONS = [
 ];
 
 export default function Evaluations({ agents }) {
+  const AGENT_COLORS = Object.fromEntries(agents.map(a => [a.name, a.color]));
   const [weekOffset, setWeekOffset] = useState(0);
   const [allEntries, setAllEntries] = useState([]);
 

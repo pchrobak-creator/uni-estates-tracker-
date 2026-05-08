@@ -31,6 +31,26 @@ db.exec(`
     transakcje INTEGER DEFAULT 0,
     UNIQUE(agent, quarter)
   );
+
+  CREATE TABLE IF NOT EXISTS inquiry_statuses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agent TEXT NOT NULL,
+    sheet_row_key TEXT NOT NULL,
+    status TEXT NOT NULL,
+    comment TEXT DEFAULT '',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(agent, sheet_row_key)
+  );
+
+  CREATE TABLE IF NOT EXISTS lead_statuses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agent TEXT NOT NULL,
+    sheet_row_key TEXT NOT NULL,
+    status TEXT NOT NULL,
+    comment TEXT DEFAULT '',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(agent, sheet_row_key)
+  );
 `);
 
 const revCount = db.prepare('SELECT COUNT(*) as cnt FROM revenue').get();
